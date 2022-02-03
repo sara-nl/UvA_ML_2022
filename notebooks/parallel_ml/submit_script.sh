@@ -5,12 +5,12 @@
 
 #SBATCH -t 0:10:00
 
-#SBATCH --partition gpu_shared_course
+#SBATCH --partition gpu_shared
 #SBATCH --reservation jhlsrf011_overlap
 
 #SBATCH --nodes 1
-#SBATCH --gpus 2
-#SBATCH --ntasks-per-node=2
+#SBATCH --gpus 4
+#SBATCH --ntasks-per-node=4
 
 #SBATCH --mem=64G
 
