@@ -14,6 +14,8 @@
 
 
 module load 2021
-module load PyTorch/1.10.0-foss-2021a-CUDA-11.3.1
+module load PyTorch/1.10.0-foss-2021a-CUDA-11.3.1 torchvision/0.11.1-foss-2021a-CUDA-11.3.1
 
-srun -n 2 python mnist_distrib.py
+export OMP_NUM_THREADS=2
+
+time python -m torch.distributed.launch --use_env --nproc_per_node=2 mnist_distrib.py

@@ -68,6 +68,7 @@ def main(rank: int,
          model: nn.Module,
          train_loader: DataLoader,
          test_loader: DataLoader) -> nn.Module:
+
     device = torch.device(f'cuda:{rank}')
     model = model.to(device)
     model = DistributedDataParallel(model, device_ids=[rank], output_device=rank)
@@ -124,10 +125,11 @@ if __name__ == '__main__':
     batch_size = 128
     epochs = 10
 
-    rank = os.environ['LOCAL_RANK']
+    rank = int(os.environ['LOCAL_RANK'])
     world_size = torch.cuda.device_count()
-
-    torch.cuda.set_device(rank)
+    
+    torch.device(f"cuda:{rank}")
+    
     torch.distributed.init_process_group(backend=Backend.NCCL,
                                          init_method='env://')
 
