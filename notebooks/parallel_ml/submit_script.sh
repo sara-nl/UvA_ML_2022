@@ -5,7 +5,7 @@
 
 #SBATCH -t 0:05:00
 
-#SBATCH --partition gpu_titanrtx_short
+#SBATCH --partition gpu_shared_course
 #SBATCH --reservation jupyterhub_course_jhlsrf011_2022-02-03
 
 #SBATCH --nodes 1
