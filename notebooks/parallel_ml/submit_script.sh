@@ -6,7 +6,7 @@
 #SBATCH -t 0:05:00
 
 #SBATCH --partition gpu_shared
-#SBATCH --reservation jupyterhub_course_jhlsrf011_2022-02-03
+#SBATCH --reservation jhlsrf011_overlap
 
 #SBATCH --nodes 1
 #SBATCH --gpus 1
@@ -21,4 +21,4 @@ pip install tqdm
 export OMP_NUM_THREADS=2
 export CUDA_VISIBLE_DEVICES=0
 
-time python -m torch.distributed.launch --nnodes=1 --nproc_pe#r_node=1 mnist_distrib.py
+time python -m torch.distributed.launch --nnodes=1 --nproc_per_node=1 mnist_distrib.py
