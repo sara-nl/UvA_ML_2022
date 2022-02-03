@@ -32,7 +32,7 @@ def create_data_loaders(rank: int,
     train_loader = DataLoader(train_dataset,
                               batch_size=batch_size,
                               shuffle=False,  # This is mandatory to set this to False here, shuffling is done by Sampler
-                              num_workers=4,
+                              num_workers=2,
                               sampler=sampler,
                               pin_memory=True)
 
@@ -44,7 +44,7 @@ def create_data_loaders(rank: int,
     test_loader = DataLoader(test_dataset,
                              batch_size=batch_size,
                              shuffle=True,
-                             num_workers=4,
+                             num_workers=2,
                              pin_memory=True)
 
     return train_loader, test_loader
@@ -91,10 +91,13 @@ def main(rank: int,
 
             x = x.view(x.shape[0], -1)
             optimizer.zero_grad()
+            
             y_hat = model(x)
             batch_loss = loss(y_hat, y)
             batch_loss.backward()
+            
             optimizer.step()
+            
             batch_loss_scalar = batch_loss.item()
             epoch_loss += batch_loss_scalar / x.shape[0]
             pbar.set_description(f'training batch_loss={batch_loss_scalar:.4f}')
@@ -122,7 +125,7 @@ def main(rank: int,
 
 if __name__ == '__main__':
 
-    batch_size = 128
+    batch_size = 256
     epochs = 10
 
     rank = int(os.environ['LOCAL_RANK'])
