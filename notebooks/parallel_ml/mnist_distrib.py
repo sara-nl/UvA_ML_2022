@@ -20,7 +20,8 @@ def create_data_loaders(rank: int,
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
     ])
-    dataset_loc = '~/JHL_data/'
+    
+    dataset_loc = '/project/jhlsrf011/JHL_data/'
 
     train_dataset = datasets.MNIST(dataset_loc,
                                    download=True,
