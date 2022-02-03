@@ -122,6 +122,21 @@ def main(rank: int,
 
     return model.module
 
+def test(model, data_loader, device=None, test_size=100):
+    device = device or torch.device("cpu")
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for testb in test_size:
+            for batch_idx, (data, target) in enumerate(data_loader):
+                data, target = data.to(device), target.to(device)
+                outputs = model(data)
+                _, predicted = torch.max(outputs.data, 1)
+                total += target.size(0)
+                correct += (predicted == target).sum().item()
+
+    return correct / total
 
 if __name__ == '__main__':
 
@@ -137,6 +152,7 @@ if __name__ == '__main__':
                                          init_method='env://')
 
     train_loader, test_loader = create_data_loaders(rank, world_size, batch_size)
+
     model = main(rank=rank,
                  epochs=epochs,
                  model=create_model(),
@@ -144,4 +160,6 @@ if __name__ == '__main__':
                  test_loader=test_loader)
 
     if rank == 0:
+        perc = test(model, test_loader, device=torch.device(f"cuda:{rank}"), test_size=70)
+        print(f"Saving model with accuracy {perc:.4f}")
         torch.save(model.state_dict(), 'model.pt')
