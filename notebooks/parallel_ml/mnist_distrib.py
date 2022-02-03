@@ -11,6 +11,8 @@ from torchvision import datasets, transforms
 
 import os
 
+
+#Loader
 def create_data_loaders(rank: int,
                         world_size: int,
                         batch_size: int) -> Tuple[DataLoader, DataLoader]:
@@ -50,6 +52,7 @@ def create_data_loaders(rank: int,
     return train_loader, test_loader
 
 
+#Network
 def create_model():
     # create model architecture
     model = nn.Sequential(
@@ -62,7 +65,32 @@ def create_model():
     )
     return model
 
+#Calculate validation loss
+def validate(model: nn.Module,
+            data_loader: DataLoader,
+            device: torch.device,
+            loss: torch.nn.CrossEntropyLoss) -> float:
 
+    total, batch_correct = 0, 0
+    with torch.no_grad():
+        model.eval()
+        pbar = tqdm(test_loader)
+        for x, y in pbar:
+            x = x.to(device, non_blocking=True)
+            y = y.to(device, non_blocking=True)
+            x = x.view(x.shape[0], -1)
+            y_hat = model(x)
+            batch_loss = loss(y_hat, y)
+            batch_loss_scalar = batch_loss.item()     
+
+            _, predicted = torch.max(y_hat, 1)
+            total += y.size(0)
+            batch_correct += (predicted == y).sum().item()
+
+            yield batch_loss_scalar, batch_correct
+
+
+#Full DNN execution
 def main(rank: int,
          epochs: int,
          model: nn.Module,
@@ -102,41 +130,16 @@ def main(rank: int,
             epoch_loss += batch_loss_scalar / x.shape[0]
             pbar.set_description(f'training batch_loss={batch_loss_scalar:.4f}')
 
-        # calculate validation loss
-        with torch.no_grad():
-            model.eval()
-            val_loss = 0
-            pbar = tqdm(test_loader)
-            for x, y in pbar:
-                x = x.to(device, non_blocking=True)
-                y = y.to(device, non_blocking=True)
-                x = x.view(x.shape[0], -1)
-                y_hat = model(x)
-                batch_loss = loss(y_hat, y)
-                batch_loss_scalar = batch_loss.item()
-
-                val_loss += batch_loss_scalar / x.shape[0]
-                pbar.set_description(f'validation batch_loss={batch_loss_scalar:.4f}')
+        pbar = tqdm(test_loader)
+        val_loss = 0
+        for batch_loss_scalar, batch_correct in validate(model, test_loader, device, loss):
+            val_loss += batch_loss_scalar / x.shape[0]
+            pbar.set_description(f'validation batch_loss={batch_loss_scalar:.4f}, batch acc={batch_correct/100:.2f}%')
 
         print(f"Epoch={i}, train_loss={epoch_loss:.4f}, val_loss={val_loss:.4f}")
 
     return model.module
 
-def test(model, data_loader, device=None, test_size=100):
-    device = device or torch.device("cpu")
-    model.eval()
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for testb in test_size:
-            for batch_idx, (data, target) in enumerate(data_loader):
-                data, target = data.to(device), target.to(device)
-                outputs = model(data)
-                _, predicted = torch.max(outputs.data, 1)
-                total += target.size(0)
-                correct += (predicted == target).sum().item()
-
-    return correct / total
 
 if __name__ == '__main__':
 
@@ -145,8 +148,6 @@ if __name__ == '__main__':
 
     rank = int(os.environ['LOCAL_RANK'])
     world_size = torch.cuda.device_count()
-    
-    torch.device(f"cuda:{rank}")
     
     torch.distributed.init_process_group(backend=Backend.NCCL,
                                          init_method='env://')
@@ -160,6 +161,4 @@ if __name__ == '__main__':
                  test_loader=test_loader)
 
     if rank == 0:
-        perc = test(model, test_loader, device=torch.device(f"cuda:{rank}"), test_size=70)
-        print(f"Saving model with accuracy {perc:.4f}")
         torch.save(model.state_dict(), 'model.pt')
